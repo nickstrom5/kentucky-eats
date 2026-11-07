@@ -1,0 +1,577 @@
+{
+ "generated": "2026-11-06",
+ "domain": "https://nickstrom5.github.io/kentucky-eats",
+ "restaurants": 8678,
+ "places_incl_hidden": 9075,
+ "towns": 378,
+ "counties": 120,
+ "on_an_official_list": 1935,
+ "hand_checked_on_a_guide": 34,
+ "serves_alcohol_state_license": 333,
+ "guide_hotbrown": 9,
+ "guide_classics": 6,
+ "guide_bourbon": 8,
+ "guide_nky": 9,
+ "guide_inns": 4,
+ "oldest": 2,
+ "honors": 6,
+ "michelin": {},
+ "james_beard": 6,
+ "americas_classics": 1,
+ "permits_updated": "2026-11-06",
+ "city_pages": {
+  "Louisville": {
+   "restaurants": 2029,
+   "listed": 7,
+   "hotbrown": 5,
+   "classics": 1,
+   "bourbon": 0,
+   "nky": 0,
+   "inns": 0,
+   "hon": 1,
+   "oldest": 0
+  },
+  "Bardstown": {
+   "restaurants": 73,
+   "listed": 7,
+   "hotbrown": 0,
+   "classics": 0,
+   "bourbon": 7,
+   "nky": 0,
+   "inns": 1,
+   "hon": 0,
+   "oldest": 1
+  },
+  "Covington": {
+   "restaurants": 137,
+   "listed": 6,
+   "hotbrown": 0,
+   "classics": 0,
+   "bourbon": 0,
+   "nky": 6,
+   "inns": 0,
+   "hon": 0,
+   "oldest": 0
+  },
+  "Frankfort": {
+   "restaurants": 116,
+   "listed": 4,
+   "hotbrown": 4,
+   "classics": 0,
+   "bourbon": 0,
+   "nky": 0,
+   "inns": 0,
+   "hon": 0,
+   "oldest": 0
+  }
+ },
+ "cities_without_a_page": {
+  "Lexington": 0,
+  "Newport": 3,
+  "Owensboro": 3,
+  "Bowling Green": 0,
+  "Paducah": 1,
+  "Berea": 0,
+  "Harrodsburg": 1,
+  "Winchester": 1,
+  "Florence": 0,
+  "Richmond": 0,
+  "Elizabethtown": 0,
+  "Georgetown": 0
+ },
+ "noindex_pages": [],
+ "web_app_data_bytes": {
+  "data/core.json": {
+   "raw": 664641,
+   "gzip": 149669
+  },
+  "data/detail-adair-county.json": {
+   "raw": 1193,
+   "gzip": 439
+  },
+  "data/detail-allen-county.json": {
+   "raw": 1525,
+   "gzip": 584
+  },
+  "data/detail-anderson-county.json": {
+   "raw": 2078,
+   "gzip": 752
+  },
+  "data/detail-ballard-county.json": {
+   "raw": 393,
+   "gzip": 206
+  },
+  "data/detail-barren-county.json": {
+   "raw": 5472,
+   "gzip": 1600
+  },
+  "data/detail-bath-county.json": {
+   "raw": 684,
+   "gzip": 332
+  },
+  "data/detail-bell-county.json": {
+   "raw": 3233,
+   "gzip": 984
+  },
+  "data/detail-boone-county.json": {
+   "raw": 20024,
+   "gzip": 5082
+  },
+  "data/detail-bourbon-county.json": {
+   "raw": 2190,
+   "gzip": 780
+  },
+  "data/detail-boyd-county.json": {
+   "raw": 7342,
+   "gzip": 2062
+  },
+  "data/detail-boyle-county.json": {
+   "raw": 4826,
+   "gzip": 1538
+  },
+  "data/detail-bracken-county.json": {
+   "raw": 576,
+   "gzip": 292
+  },
+  "data/detail-breathitt-county.json": {
+   "raw": 814,
+   "gzip": 347
+  },
+  "data/detail-breckinridge-county.json": {
+   "raw": 1190,
+   "gzip": 446
+  },
+  "data/detail-bullitt-county.json": {
+   "raw": 7191,
+   "gzip": 2035
+  },
+  "data/detail-butler-county.json": {
+   "raw": 872,
+   "gzip": 374
+  },
+  "data/detail-caldwell-county.json": {
+   "raw": 1580,
+   "gzip": 555
+  },
+  "data/detail-calloway-county.json": {
+   "raw": 5001,
+   "gzip": 1556
+  },
+  "data/detail-campbell-county.json": {
+   "raw": 16720,
+   "gzip": 4831
+  },
+  "data/detail-carlisle-county.json": {
+   "raw": 50,
+   "gzip": 69
+  },
+  "data/detail-carroll-county.json": {
+   "raw": 1486,
+   "gzip": 514
+  },
+  "data/detail-carter-county.json": {
+   "raw": 2362,
+   "gzip": 737
+  },
+  "data/detail-casey-county.json": {
+   "raw": 1015,
+   "gzip": 420
+  },
+  "data/detail-christian-county.json": {
+   "raw": 8054,
+   "gzip": 2149
+  },
+  "data/detail-clark-county.json": {
+   "raw": 4220,
+   "gzip": 1354
+  },
+  "data/detail-clay-county.json": {
+   "raw": 1128,
+   "gzip": 455
+  },
+  "data/detail-clinton-county.json": {
+   "raw": 727,
+   "gzip": 312
+  },
+  "data/detail-crittenden-county.json": {
+   "raw": 622,
+   "gzip": 289
+  },
+  "data/detail-cumberland-county.json": {
+   "raw": 590,
+   "gzip": 268
+  },
+  "data/detail-daviess-county.json": {
+   "raw": 13275,
+   "gzip": 3645
+  },
+  "data/detail-edmonson-county.json": {
+   "raw": 562,
+   "gzip": 258
+  },
+  "data/detail-elliott-county.json": {
+   "raw": 276,
+   "gzip": 184
+  },
+  "data/detail-estill-county.json": {
+   "raw": 690,
+   "gzip": 299
+  },
+  "data/detail-fayette-county.json": {
+   "raw": 53750,
+   "gzip": 13141
+  },
+  "data/detail-fleming-county.json": {
+   "raw": 702,
+   "gzip": 320
+  },
+  "data/detail-floyd-county.json": {
+   "raw": 2968,
+   "gzip": 899
+  },
+  "data/detail-franklin-county.json": {
+   "raw": 7386,
+   "gzip": 2156
+  },
+  "data/detail-fulton-county.json": {
+   "raw": 558,
+   "gzip": 258
+  },
+  "data/detail-gallatin-county.json": {
+   "raw": 721,
+   "gzip": 333
+  },
+  "data/detail-garrard-county.json": {
+   "raw": 916,
+   "gzip": 398
+  },
+  "data/detail-grant-county.json": {
+   "raw": 2717,
+   "gzip": 906
+  },
+  "data/detail-graves-county.json": {
+   "raw": 2570,
+   "gzip": 807
+  },
+  "data/detail-grayson-county.json": {
+   "raw": 2377,
+   "gzip": 813
+  },
+  "data/detail-green-county.json": {
+   "raw": 888,
+   "gzip": 376
+  },
+  "data/detail-greenup-county.json": {
+   "raw": 2251,
+   "gzip": 717
+  },
+  "data/detail-hancock-county.json": {
+   "raw": 359,
+   "gzip": 211
+  },
+  "data/detail-hardin-county.json": {
+   "raw": 14919,
+   "gzip": 3862
+  },
+  "data/detail-harlan-county.json": {
+   "raw": 1737,
+   "gzip": 604
+  },
+  "data/detail-harrison-county.json": {
+   "raw": 1746,
+   "gzip": 610
+  },
+  "data/detail-hart-county.json": {
+   "raw": 1249,
+   "gzip": 451
+  },
+  "data/detail-henderson-county.json": {
+   "raw": 4983,
+   "gzip": 1444
+  },
+  "data/detail-henry-county.json": {
+   "raw": 1114,
+   "gzip": 431
+  },
+  "data/detail-hickman-county.json": {
+   "raw": 166,
+   "gzip": 103
+  },
+  "data/detail-hopkins-county.json": {
+   "raw": 4586,
+   "gzip": 1342
+  },
+  "data/detail-jackson-county.json": {
+   "raw": 246,
+   "gzip": 168
+  },
+  "data/detail-jefferson-county.json": {
+   "raw": 319773,
+   "gzip": 44062
+  },
+  "data/detail-jessamine-county.json": {
+   "raw": 6288,
+   "gzip": 1829
+  },
+  "data/detail-johnson-county.json": {
+   "raw": 1767,
+   "gzip": 563
+  },
+  "data/detail-kenton-county.json": {
+   "raw": 20523,
+   "gzip": 5413
+  },
+  "data/detail-knott-county.json": {
+   "raw": 364,
+   "gzip": 205
+  },
+  "data/detail-knox-county.json": {
+   "raw": 2376,
+   "gzip": 738
+  },
+  "data/detail-larue-county.json": {
+   "raw": 1169,
+   "gzip": 490
+  },
+  "data/detail-laurel-county.json": {
+   "raw": 6734,
+   "gzip": 1879
+  },
+  "data/detail-lawrence-county.json": {
+   "raw": 1223,
+   "gzip": 448
+  },
+  "data/detail-lee-county.json": {
+   "raw": 391,
+   "gzip": 228
+  },
+  "data/detail-leslie-county.json": {
+   "raw": 381,
+   "gzip": 221
+  },
+  "data/detail-letcher-county.json": {
+   "raw": 1419,
+   "gzip": 545
+  },
+  "data/detail-lewis-county.json": {
+   "raw": 532,
+   "gzip": 280
+  },
+  "data/detail-lincoln-county.json": {
+   "raw": 1192,
+   "gzip": 465
+  },
+  "data/detail-livingston-county.json": {
+   "raw": 591,
+   "gzip": 248
+  },
+  "data/detail-logan-county.json": {
+   "raw": 1977,
+   "gzip": 685
+  },
+  "data/detail-lyon-county.json": {
+   "raw": 1045,
+   "gzip": 435
+  },
+  "data/detail-madison-county.json": {
+   "raw": 11941,
+   "gzip": 3283
+  },
+  "data/detail-magoffin-county.json": {
+   "raw": 947,
+   "gzip": 377
+  },
+  "data/detail-marion-county.json": {
+   "raw": 1720,
+   "gzip": 623
+  },
+  "data/detail-marshall-county.json": {
+   "raw": 3318,
+   "gzip": 992
+  },
+  "data/detail-martin-county.json": {
+   "raw": 742,
+   "gzip": 326
+  },
+  "data/detail-mason-county.json": {
+   "raw": 2585,
+   "gzip": 852
+  },
+  "data/detail-mccracken-county.json": {
+   "raw": 13036,
+   "gzip": 3597
+  },
+  "data/detail-mccreary-county.json": {
+   "raw": 680,
+   "gzip": 307
+  },
+  "data/detail-mclean-county.json": {
+   "raw": 525,
+   "gzip": 266
+  },
+  "data/detail-meade-county.json": {
+   "raw": 1890,
+   "gzip": 632
+  },
+  "data/detail-menifee-county.json": {
+   "raw": 130,
+   "gzip": 131
+  },
+  "data/detail-mercer-county.json": {
+   "raw": 2259,
+   "gzip": 820
+  },
+  "data/detail-metcalfe-county.json": {
+   "raw": 593,
+   "gzip": 274
+  },
+  "data/detail-monroe-county.json": {
+   "raw": 959,
+   "gzip": 364
+  },
+  "data/detail-montgomery-county.json": {
+   "raw": 3235,
+   "gzip": 1044
+  },
+  "data/detail-morgan-county.json": {
+   "raw": 691,
+   "gzip": 309
+  },
+  "data/detail-muhlenberg-county.json": {
+   "raw": 2777,
+   "gzip": 873
+  },
+  "data/detail-nelson-county.json": {
+   "raw": 5384,
+   "gzip": 1859
+  },
+  "data/detail-nicholas-county.json": {
+   "raw": 363,
+   "gzip": 203
+  },
+  "data/detail-ohio-county.json": {
+   "raw": 1423,
+   "gzip": 497
+  },
+  "data/detail-oldham-county.json": {
+   "raw": 4877,
+   "gzip": 1481
+  },
+  "data/detail-owen-county.json": {
+   "raw": 468,
+   "gzip": 246
+  },
+  "data/detail-owsley-county.json": {
+   "raw": 79,
+   "gzip": 78
+  },
+  "data/detail-pendleton-county.json": {
+   "raw": 730,
+   "gzip": 351
+  },
+  "data/detail-perry-county.json": {
+   "raw": 3079,
+   "gzip": 978
+  },
+  "data/detail-pike-county.json": {
+   "raw": 5858,
+   "gzip": 1690
+  },
+  "data/detail-powell-county.json": {
+   "raw": 1546,
+   "gzip": 526
+  },
+  "data/detail-pulaski-county.json": {
+   "raw": 7160,
+   "gzip": 2028
+  },
+  "data/detail-robertson-county.json": {
+   "raw": 149,
+   "gzip": 133
+  },
+  "data/detail-rockcastle-county.json": {
+   "raw": 1040,
+   "gzip": 454
+  },
+  "data/detail-rowan-county.json": {
+   "raw": 3173,
+   "gzip": 960
+  },
+  "data/detail-russell-county.json": {
+   "raw": 1673,
+   "gzip": 580
+  },
+  "data/detail-scott-county.json": {
+   "raw": 6917,
+   "gzip": 1984
+  },
+  "data/detail-shelby-county.json": {
+   "raw": 5180,
+   "gzip": 1530
+  },
+  "data/detail-simpson-county.json": {
+   "raw": 2828,
+   "gzip": 936
+  },
+  "data/detail-spencer-county.json": {
+   "raw": 1071,
+   "gzip": 439
+  },
+  "data/detail-taylor-county.json": {
+   "raw": 3380,
+   "gzip": 1003
+  },
+  "data/detail-todd-county.json": {
+   "raw": 678,
+   "gzip": 283
+  },
+  "data/detail-trigg-county.json": {
+   "raw": 1271,
+   "gzip": 477
+  },
+  "data/detail-trimble-county.json": {
+   "raw": 336,
+   "gzip": 220
+  },
+  "data/detail-union-county.json": {
+   "raw": 1244,
+   "gzip": 468
+  },
+  "data/detail-warren-county.json": {
+   "raw": 19022,
+   "gzip": 4841
+  },
+  "data/detail-washington-county.json": {
+   "raw": 810,
+   "gzip": 349
+  },
+  "data/detail-wayne-county.json": {
+   "raw": 1394,
+   "gzip": 502
+  },
+  "data/detail-webster-county.json": {
+   "raw": 701,
+   "gzip": 323
+  },
+  "data/detail-whitley-county.json": {
+   "raw": 3448,
+   "gzip": 1016
+  },
+  "data/detail-wolfe-county.json": {
+   "raw": 611,
+   "gzip": 284
+  },
+  "data/detail-woodford-county.json": {
+   "raw": 3296,
+   "gzip": 1052
+  },
+  "data/ids.json": {
+   "raw": 112842,
+   "gzip": 65671
+  },
+  "data/ky_shapes.json": {
+   "raw": 126984,
+   "gzip": 29653
+  }
+ }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "Kentucky Eats",
+  "short_name": "KY Eats",
+  "description": "Hot Browns, burgoo & bourbon: a guide to 8,678 Kentucky restaurants.",
+  "start_url": "/kentucky-eats/",
+  "display": "browser",
+  "background_color": "#fbf7ee",
+  "theme_color": "#1f3a5f",
+  "icons": [
+    {
+      "src": "/kentucky-eats/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/kentucky-eats/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
