@@ -15,7 +15,7 @@ cache = json.load(open(cache_path)) if os.path.exists(cache_path) else {}
 misses = set(cache.pop("_misses", []))
 F = pd.read_pickle(f"{KY}/official.pkl")
 todo = []
-_need = F.lat.isna() & F.kind.isin(["food"])   # Kentucky: the county lists' places to eat and drink
+_need = F.lat.isna() & F.kind.isin(["food", "inspected", "liquor"])   # Kentucky: the county lists' places to eat and drink
 for a, c, z in zip(F.loc[_need, "addr"], F.loc[_need, "city"], F.loc[_need, "zip"]):
     if isinstance(a, str) and a.strip():
         todo.append((a.strip(), (c or "").strip().title() if isinstance(c, str) else "", z or ""))

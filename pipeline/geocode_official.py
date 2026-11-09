@@ -4,7 +4,7 @@ Kentucky has no official list yet (official.py), so there's nothing to place; th
 Kentucky address points, about 1.5 million) still places researched addresses the map listings lack (kentucky.py). Match: same house number and street
 key, then the same zip (else the same town). -> data/ky/official.pkl (official.load() plus lat/lon/geo columns)
 """
-import os, re, time, pickle
+import os, re, time, pickle, json
 import numpy as np, pandas as pd
 from common import KY, canon_city
 import official
@@ -35,7 +35,22 @@ by = {k: g for k, g in APn.groupby(["num", "key"])}
 print("indexed", len(by), "of", len(need), "needed addresses", round(time.time() - t), "s", flush=True)
 
 
-def place(num, key, zip5, city):
+_CTY = None
+
+
+def in_county(name, lat, lon):
+    """Address points inside a county's outline: for a record its list files by county with no town or zip (Vanderburgh's reports)."""
+    global _CTY
+    if _CTY is None:
+        from shapely.geometry import shape
+        from shapely.prepared import prep
+        _CTY = {n: prep(shape(g)) for n, g in json.load(open(f"{KY}/ky_counties_detail.geojson")).items()}
+    from shapely.geometry import Point
+    poly = _CTY.get(name)
+    return np.array([bool(poly) and poly.contains(Point(lo, la)) for la, lo in zip(lat, lon)], dtype=bool)
+
+
+def place(num, key, zip5, city, county=None):
     g = by.get((num, key))
     if g is None:
         return None
@@ -44,6 +59,10 @@ def place(num, key, zip5, city):
         h = g[sel] if (zip5 if how == "zip" else town) else g.iloc[0:0]
         if len(h) and (h.lat.max() - h.lat.min()) < 0.01 and (h.lon.max() - h.lon.min()) < 0.013:
             return float(h.lat.median()), float(h.lon.median()), how
+    if isinstance(county, str) and county and not zip5 and not town:
+        h = g[in_county(county, g.lat.values, g.lon.values)]
+        if len(h) and (h.lat.max() - h.lat.min()) < 0.01 and (h.lon.max() - h.lon.min()) < 0.013:
+            return float(h.lat.median()), float(h.lon.median()), "county"
     return None
 
 
@@ -55,7 +74,8 @@ if "n_pts" in F:
     F.loc[unsure, ["lat", "lon"]] = np.nan
     F.loc[unsure, "geo"] = None
 miss = F.lat.isna() & F.num.notna() & F.street.notna()
-hits = [place(n, k, z, c) for n, k, z, c in zip(F.loc[miss, "num"], F.loc[miss, "street"], F.loc[miss, "zip"], F.loc[miss, "city"])]
+cty_col = F.loc[miss, "county"] if "county" in F else pd.Series([None] * int(miss.sum()), index=F.index[miss])
+hits = [place(n, k, z, c, ct) for n, k, z, c, ct in zip(F.loc[miss, "num"], F.loc[miss, "street"], F.loc[miss, "zip"], F.loc[miss, "city"], cty_col)]
 for i, h in zip(F.index[miss], hits):
     if h:
         F.at[i, "lat"], F.at[i, "lon"], F.at[i, "geo"] = h

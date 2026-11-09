@@ -164,8 +164,8 @@ final class KentuckyEatsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(m.count(.honors), 5)
         XCTAssertEqual(m.bibCount, 0, "no MICHELIN Guide covers Kentucky")
         XCTAssertTrue(m.places.allSatisfy { $0.michelin == .none })
-        XCTAssertGreaterThan(m.alcoholLicenseCount, 200, "Louisville Metro's on-premises ABC licenses are attached")
-        XCTAssertTrue(m.places.filter(\.servesAlcohol).allSatisfy { $0.county == "Jefferson County" }, "alcohol status only where Louisville Metro licenses")
+        XCTAssertGreaterThan(m.alcoholLicenseCount, 1_500, "Louisville Metro's and Kentucky ABC's on-premises licenses are attached")
+        XCTAssertGreaterThan(m.places.filter { $0.servesAlcohol && $0.county != "Jefferson County" }.count, 1_000, "Kentucky ABC's statewide licenses reach past Louisville")
         XCTAssertEqual(Set(m.places.map(\.id)).count, m.places.count, "ids are unique")
         for g in Guide.allCases where g.tag != nil {
             XCTAssertTrue(m.places.filter(g.includes).allSatisfy(\.handChecked), "\(g.title) lists only hand-checked places")
@@ -175,10 +175,17 @@ final class KentuckyEatsTests: XCTestCase {
         XCTAssertTrue(m.places.contains { $0.name == "Beaumont Inn" && $0.jamesBeardLabel == "America's Classic" && $0.handChecked })
         XCTAssertTrue(m.places.contains { $0.name == "The Baker's Table" && $0.jamesBeardLabel == "James Beard finalist" })
         let inspected = m.places.filter { $0.inspection != nil }
-        XCTAssertGreaterThan(inspected.count, 1_000, "Louisville Metro's results are attached")
-        XCTAssertTrue(inspected.allSatisfy { $0.county == "Jefferson County" }, "results only where Louisville Metro inspects")
+        let jur = { (p: Place) in p.inspection.flatMap { m.jurisdictionName($0.jurisdiction) } ?? "" }
+        let lou = inspected.filter { jur($0).hasPrefix("Louisville") }, state = inspected.filter { !jur($0).hasPrefix("Louisville") }
+        XCTAssertGreaterThan(lou.count, 1_000, "Louisville Metro's results are attached")
+        XCTAssertGreaterThan(state.count, 2_000, "the state portal's county results are attached")
+        XCTAssertTrue(lou.allSatisfy { $0.county == "Jefferson County" }, "Louisville results only where Louisville Metro inspects")
+        XCTAssertTrue(state.allSatisfy { $0.county != "Jefferson County" }, "the state portal isn't read for Jefferson County")
+        XCTAssertTrue(state.allSatisfy { jur($0) == "Kentucky local health department (state public portal)" })
         XCTAssertTrue(m.inspectionResults.allSatisfy { $0.range(of: #"^Score \d{1,3}(, grade [ABC])?$"#, options: .regularExpression) != nil },
                       "every result is the published score, with Louisville's own letter only where it gave one")
+        XCTAssertTrue(state.allSatisfy { p in p.inspection.flatMap { m.resultText($0.result) }.map { !$0.contains("grade") } ?? false },
+                      "no letter grade outside Louisville: the portal publishes scores only")
         // no Google-derived data: the data file has no rating, review or price fields at all
         let raw = try String(contentsOf: Bundle.main.url(forResource: "places", withExtension: "json")!, encoding: .utf8)
         for key in ["\"rating\"", "\"reviews\"", "\"price\"", "\"gmap_id\""] { XCTAssertFalse(raw.contains(key), "\(key) must not ship") }
@@ -195,7 +202,7 @@ final class KentuckyEatsTests: XCTestCase {
             let url = try XCTUnwrap(Bundle.main.url(forResource: "detail-" + AppModel.regionSlug(region), withExtension: "json"), region)
             let d = try JSONDecoder().decode([String: PlaceDetail].self, from: Data(contentsOf: url))
             XCTAssertTrue(Set(d.keys).isSubset(of: ids), "\(region) detail ids are core ids")
-            XCTAssertTrue(d.values.allSatisfy { $0.licenses.allSatisfy { ["Louisville Metro food permit", "Louisville Metro ABC license"].contains($0.source) } }, "\(region): the only license records are Louisville Metro's")
+            XCTAssertTrue(d.values.allSatisfy { $0.licenses.allSatisfy { ["Louisville Metro food permit", "Louisville Metro ABC license", "Kentucky public inspection portal", "Kentucky ABC license"].contains($0.source) } }, "\(region): the only license records are Louisville Metro's")
             detailed += d.count
         }
         XCTAssertGreaterThan(detailed, 2_000, "places with a phone or website have a detail record")

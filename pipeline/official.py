@@ -4,9 +4,9 @@ Kentucky's local and district health departments inspect under 902 KAR 45:005 (t
 violation points. The one open feed is Louisville Metro's (Jefferson County, PDDL): its permitted establishments (about 8,500, most with
 a point), five years of inspections with the official score and, on most regular inspections, Louisville Metro Public Health and
 Wellness's own A/B/C grade, shown as published, dated, never recomputed; and Louisville Metro's ABC (alcoholic beverage) licenses. The
-other 119 counties' scores sit on Custom Data Processing's statewide portal (public.cdpehs.com), which posts no terms: linked per
-county, never exported, until Nick decides. Kentucky ABC's BELLE lookup has no posted terms: not used, so outside Jefferson County
-"Serves alcohol" is unknown.
+other 119 counties' scores sit on Custom Data Processing's statewide portal (public.cdpehs.com): with Nick's yes (2026-11-07),
+fetch_cdp.py exports each county's table (the last inspection and any follow-up, with the score as published: no grade outside
+Louisville). Kentucky ABC's BELLE lookup (fetch_abc_belle.py, Nick's yes 2026-11-07) gives the on-premise drink licenses statewide.
 
 load() returns: jur, lic (our id), name, keys (name keys), addr, city, zip, num, street, lat, lon, kind, active, ltype, insp, biz.
 """
@@ -118,7 +118,7 @@ INSPECTIONS_URL = "https://public.cdpehs.com/KYEnvPBL/VW_PUBLIC_EST_INSP/ShowVW_
 # the inspection types whose score is a food inspection's score (not an office visit, a survey or an enforcement step)
 INS_TYPES = {"REGULAR": "Regular", "FOLLOWUP": "Follow-up", "COMPLAINT": "Complaint"}
 RESULTS = ()       # filled by load_louisville(): "Score 97, grade A" / "Score 95", as published
-ONPREM_T = ("Louisville Metro on-premises alcohol license",)
+ONPREM_T = ("Louisville Metro on-premises alcohol license", "Kentucky ABC on-premises drink license")
 RETAIL_T = "Louisville Metro package alcohol license"
 ABC_ON = {"Restaurant / Cafe", "Bar", "Private Club", "Hotels", "River Boat", "Bowling Alley", "Amusement", "Theatre / Museum",
           "Convention Center Complex", "Airport", "Golf Course", "Country Club", "Sports / Fitness", "Horse Race Track", "Catering"}
@@ -240,13 +240,89 @@ def load_louabc():
     return rows
 
 
+CDP_DIR = os.path.join(OFF, "cdp")
+CDP_META = json.load(open(os.path.join(CDP_DIR, "fetched.json"))) if os.path.exists(os.path.join(CDP_DIR, "fetched.json")) else {}
+FETCHED_CDP = CDP_META.get("fetched")
+COUNTIES = sorted(json.load(open(os.path.join(KY, "ky_counties_detail.geojson"))).keys())   # CDP numbers: alphabetical, Adair 1
+
+
+def _mdy(v):
+    """'9/1/2026' -> '2026-09-01'."""
+    m = re.match(r"^\s*(\d{1,2})/(\d{1,2})/(\d{4})\s*$", str(v or ""))
+    return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else None
+
+
+def load_cdp():
+    """Kentucky's statewide portal, county by county: the last inspection and any follow-up, each with its score as published. The
+    export carries no establishment type (schools, day cares and groceries are in it), so these rows only ever attach to a listing they
+    match: kind "inspected" never adds a place."""
+    import csv
+    rows = []
+    for fn in sorted(os.listdir(CDP_DIR)):
+        m = re.match(r"^(\d{3})\.csv$", fn)
+        if not m:
+            continue
+        n = int(m.group(1)); county = COUNTIES[n - 1]
+        for i, r in enumerate(csv.DictReader(open(os.path.join(CDP_DIR, fn), encoding="utf-8"))):
+            name = re.sub(r"\s+", " ", r.get("Premise Name") or "").strip()
+            addr = _addr(r.get("Premise Address 1"))
+            if not name or not addr:
+                continue
+            insp = []
+            for dk, sk, typ, tag in (("Last Insp Date", "Last Insp Score", "Inspection", "l"), ("Follow Insp Date", "Follow Insp Score", "Follow-up", "f")):
+                d, sc = _mdy(r.get(dk)), str(r.get(sk) or "").strip()
+                if d and re.fullmatch(r"\d{1,3}", sc) and (not FETCHED_CDP or d <= FETCHED_CDP):
+                    insp.append([d, f"Score {int(sc)}", typ, f"cdp-{n}-{i}-{tag}"])
+            num, st = street_key(addr)
+            rows.append({"jur": "cdp", "lic": f"cdp-{n}-{i}", "name": name, "dba": name, "holder": None, "keys": _names(name), "addr": addr,
+                         "city": _city(r.get("Premise City")), "zip": "", "num": num, "street": st, "lat": None, "lon": None,
+                         "kind": "inspected", "active": True, "ltype": "Kentucky food establishment inspection record",
+                         "insp": sorted(insp, key=lambda v: v[0], reverse=True), "issued": None, "drinks": None, "county": county})
+    return rows
+
+
+ABC_DIR = os.path.join(OFF, "ky_abc")
+# Kentucky ABC's drink license types -> what each allows by the drink (KRS 243.082-243.084, 243.030)
+KYABC_DRINKS = {"NQ1": ["beer", "wine", "liquor"], "NQ2": ["beer", "wine", "liquor"], "NQ3": ["beer", "wine", "liquor"],
+                "NQ4": ["beer"], "LD": ["wine", "liquor"], "LR": ["beer", "wine", "liquor"]}
+
+
+def load_kyabc():
+    """Kentucky ABC's active on-premise drink licenses, statewide (BELLE lookup): DBA name and premises only; a license with no DBA
+    name (only its holder's name, often a person's) is left out."""
+    rows = []
+    for fn in sorted(os.listdir(ABC_DIR)):
+        if not fn.endswith(".json"):
+            continue
+        d = json.load(open(os.path.join(ABC_DIR, fn)))
+        lt = d["type"]
+        for r in d["rows"]:
+            dbas = [x.strip() for x in (r.get("DBA") or "").split(";") if x.strip()]
+            if not dbas:
+                continue
+            addr = _addr(r.get("PremisesStreet"))
+            num, st = street_key(addr)
+            cty = (r.get("County") or "").strip()
+            rows.append({"jur": "kyabc", "lic": f"kyabc-{lt}-{r.get('SiteID')}", "name": dbas[0], "dba": dbas[0], "holder": None,
+                         "keys": _names(*dbas), "addr": addr, "city": _city(r.get("City")), "zip": _zip(r.get("Zip")), "num": num,
+                         "street": st, "lat": None, "lon": None, "kind": "liquor", "active": True, "ltype": ONPREM_T[1], "insp": [],
+                         "issued": None, "drinks": KYABC_DRINKS.get(lt),
+                         "county": (cty if cty.endswith("County") else cty + " County") if cty else None})
+    return rows
+
+
 def load():
-    """Louisville Metro's food permits (with their inspections) and its ABC licenses (see the docstring)."""
+    """Louisville Metro's food permits (with their inspections) and its ABC licenses, the statewide portal's county inspections and
+    Kentucky ABC's statewide drink licenses (see the docstring)."""
     rows = []
     if os.path.exists(os.path.join(OFF, "louisville", "establishments.json")):
         rows += load_louisville()
     if os.path.exists(os.path.join(OFF, "louisville", "abc.json")):
         rows += load_louabc()
+    if os.path.isdir(CDP_DIR):
+        rows += load_cdp()
+    if os.path.isdir(ABC_DIR):
+        rows += load_kyabc()
     df = pd.DataFrame(rows) if rows else pd.DataFrame({c: pd.Series(dtype=object) for c in COLUMNS})
     for c_ in COLUMNS:
         if c_ not in df.columns:

@@ -1062,7 +1062,7 @@ def browser_checks(problems):
             got = int(re.match(r"([\d,]+)", count_text).group(1).replace(",", "")) if re.match(r"[\d,]+", count_text) else 0
             if not nl or got < nl:
                 problems.append(f"explore @{width}: 'north main' listed {got} places, but {nl} have an N Main address")
-            # a hand-checked Bardstown place: the panel says alcohol is unknown (outside Louisville no license list is used) and links its county's portal table
+            # a hand-checked Bardstown place: the panel has its alcohol status (a Kentucky ABC license, or unknown, never "no") and links its county's portal table
             names = {}
             for r in rows:
                 names[r["n"]] = names.get(r["n"], 0) + 1
@@ -1083,8 +1083,8 @@ def browser_checks(problems):
                     ptxt = panel.inner_text()
                     if "Serves alcohol".upper() not in ptxt.upper() or "unknown, never".upper() not in ptxt.upper():
                         problems.append(f"explore @{width}: the panel for {beer!r} doesn't say its alcohol status is unknown: {ptxt[:300]!r}")
-                    if not panel.locator(f'a[href*="{DPH_HOST}"]').count():
-                        problems.append(f"explore @{width}: the panel has no link to the county's table on the state portal")
+                    if not panel.locator(f'a[href*="{DPH_HOST}"], a[href*="louisvilleky.gov"]').count():
+                        problems.append(f"explore @{width}: the panel has no link to the county's table on the state portal or Louisville's page")
                     if width == 375:
                         modal = page.evaluate("""[document.querySelector('#ex-panel').getAttribute('role'),
                             document.querySelector('#ex-panel').getAttribute('aria-modal'), document.querySelector('#ex-app').inert,

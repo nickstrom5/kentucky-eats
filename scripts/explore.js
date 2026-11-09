@@ -292,12 +292,18 @@
     behind.forEach((el) => { el.inert = modal; });
   }
 
-  // Louisville Metro's official score and its own grade where it gave one, as published and dated; elsewhere the place links its
-  // county's table on the statewide portal (no result is copied, no grade computed)
+  // the latest official result as published and dated: Louisville Metro's score and its own grade where it gave one, or elsewhere the
+  // county's score from the statewide portal (no grade there); the link goes to Louisville's page or the county's portal table
+  // Jefferson County's results come from Louisville Metro's open data (the portal's Jefferson table is never read)
+  const portalLink = (p) => p.county === "Jefferson County"
+    ? `<p><a href="${LOU_URL}" rel="noopener" target="_blank">Louisville Metro's food safety page</a></p>`
+    : `<p><a href="${countyPortal(p.county)}" rel="noopener" target="_blank">${esc(p.county ? p.county + " scores on the state portal" : "Kentucky's inspection portal")}</a></p>`;
   const inspectionSection = (d, p) => section("Health inspections", Array.isArray(d.ins) && d.ins.length >= 2
     ? kv("Latest inspection", `${d.ins[0]} · ${fmtDate(d.ins[1])}`)
-      + `<p class="ex-fine">Official results from Louisville Metro Public Health and Wellness's open data: the score is 100 minus the violation points under Kentucky's food code, and the letter is Louisville's own grade, shown only where it gave one. This site computes no grade, and an older result may not reflect the place today.</p><p><a href="${LOU_URL}" rel="noopener" target="_blank">Louisville Metro's food safety page</a></p>`
-    : `<p class="ex-fine">Outside Louisville Metro's open data, Kentucky's health departments post their inspection scores on the state's public inspection portal, which this site doesn't copy, so it shows no result here and computes no grade.</p><p><a href="${countyPortal(p.county)}" rel="noopener" target="_blank">${esc(p.county ? p.county + " scores on the state portal" : "Kentucky's inspection portal")}</a></p>`);
+      + (String(d.ins[2] || "").startsWith("Louisville")
+        ? `<p class="ex-fine">Official results from Louisville Metro Public Health and Wellness's open data: the score is 100 minus the violation points under Kentucky's food code, and the letter is Louisville's own grade, shown only where it gave one. This site computes no grade, and an older result may not reflect the place today.</p><p><a href="${LOU_URL}" rel="noopener" target="_blank">Louisville Metro's food safety page</a></p>`
+        : `<p class="ex-fine">Official results from Kentucky's public inspection portal, posted by the county health department: the last inspection's score, 100 minus the violation points under Kentucky's food code, shown as published. This site computes no grade, and an older result may not reflect the place today.</p>` + portalLink(p))
+    : `<p class="ex-fine">Kentucky's health departments post their inspection scores on the state's public inspection portal (Louisville Metro in its open data). No score in them was matched to this place, so none is shown, and this site computes no grade.</p>` + portalLink(p));
 
   function openPlace(p, push = true) {
     const panel = $("#ex-panel");
@@ -353,8 +359,8 @@
       const lic = Array.isArray(d.lic) ? d.lic.filter(Array.isArray) : [];
       html += section("Official records", (lic.length ? lic.map((l) => kv(String(l[0] || "Record"), [l[2], l[1] ? "No. " + l[1] : ""].filter(Boolean).join(" · ") || "On the list")).join("")
           : kv("License record", "—"))
-        + kv("Serves alcohol", p.lq ? "Licensed to serve on the premises (Louisville Metro ABC)" : "—")
-        + `<p class="ex-fine">${lic.length ? `From Louisville Metro's open data: its list of permitted food establishments and its ABC licenses. Elsewhere in Kentucky no open license list is used, so — means unknown, never "no".` : `Outside Louisville Metro, Kentucky publishes no open list of its restaurants we use, and Kentucky ABC's statewide license lookup isn't used, so this site shows no license and no alcohol status: — means unknown, never "no".`}</p>`);
+        + kv("Serves alcohol", p.lq ? `Licensed to serve on the premises (${lic.some((l) => String(l[0] || "").startsWith("Louisville Metro ABC")) ? "Louisville Metro ABC" : "Kentucky ABC"})` : "—")
+        + `<p class="ex-fine">${lic.length ? `From Louisville Metro's open data (its permitted food establishments and ABC licenses), Kentucky's public inspection portal and Kentucky ABC's statewide license lookup. A record that wasn't matched shows —, which means unknown, never "no".` : `No record in Louisville Metro's open data, Kentucky's public inspection portal or Kentucky ABC's license lookup was matched to this place, so — means unknown, never "no".`}</p>`);
     }
     html += loaded ? inspectionSection(d, p) : "";
     html += section("How we know it's here", kv("Listed as", TIER[p.t])

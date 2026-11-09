@@ -15,7 +15,8 @@ Rules the copy keeps (scripts/qa-site.py checks them):
 - "Checked" only for the hand-checked lists (`hc`, a 2025-26 source or an official tourism listing for each place).
 - Inspection results are Louisville Metro's official score and its own A/B/C grade where it gave one, dated, never recomputed;
   elsewhere none is shown.
-- "Serves alcohol" is shown only from Louisville Metro's ABC licenses (Jefferson County); elsewhere it is unknown, never "no".
+- "Serves alcohol" comes from Louisville Metro's ABC licenses and Kentucky ABC's statewide on-premises drink licenses; a place with no
+  matched license is unknown, never "no".
 - Claims stay claims: founding years are tied to a dated source, and "first", "oldest" or "original" are the source's words.
 - Every page carries a hash-pinned Content-Security-Policy; inline scripts and styles are hashed after the page is final.
 
@@ -76,7 +77,12 @@ assert DETAIL_SRC, "data/app/detail-*.json are missing"
 def merged(r):
     """One place with its detail fields (phone, website; county records and inspection history where a state has them) put back."""
     out = dict(r)
-    out.update(DETAIL_SRC.get(r["id"]) or {})
+    d = dict(DETAIL_SRC.get(r["id"]) or {})
+    # the detail file's "in" is the inspection history ({"n", "h"}); the core's "in" is the latest result [jurisdiction, result, date]:
+    # keep both (the history once overwrote the latest result, so no result reached the site)
+    if "in" in d:
+        out["in_hist"] = d.pop("in")
+    out.update(d)
     return out
 
 
@@ -90,8 +96,12 @@ DPH_URL = "https://public.cdpehs.com/KYEnvPBL/VW_PUBLIC_EST_INSP/ShowVW_PUBLIC_E
 FFX_URL = "https://louisvilleky.gov/government/health-wellness/food-safety"   # Louisville Metro Public Health and Wellness, food safety
 LOU_DATA = "https://data.louisvilleky.gov/"   # Louisville Metro's open data platform (PDDL)
 MI_URL = "https://guide.michelin.com/us/en"   # no MICHELIN Guide covers Kentucky
-RESULTS = D.get("results") or []            # Louisville Metro's published results ("Score 97, grade A")
-INS_THROUGH = max((D.get("inspections_through") or {}).values(), default="")   # Louisville Metro's latest inspection date
+RESULTS = D.get("results") or []            # published results: Louisville's "Score 97, grade A", the state portal's "Score 92"
+INS_JUR = D.get("ins_jur") or []            # [Louisville Metro Public Health and Wellness, Kentucky local health department (state public portal)]
+INS_THROUGH_ALL = D.get("inspections_through") or {}
+LOU_JUR, STATE_JUR = "Louisville Metro Public Health and Wellness", "Kentucky local health department (state public portal)"
+INS_THROUGH = INS_THROUGH_ALL.get(LOU_JUR, "")          # Louisville Metro's latest inspection date
+INS_THROUGH_STATE = INS_THROUGH_ALL.get(STATE_JUR, "")  # the state portal's latest
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 NUM_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
 
@@ -181,9 +191,10 @@ class P:
         self.mi = r.get("mi") if r.get("mi") in range(1, len(MI)) else 0
         self.hc = r.get("hc") == 1   # hand-checked against a 2025-26 source; the only places the themed guides list
         self.lic = r.get("lic") or []   # county records: [[list, number, type]]
-        self.beer = r.get("liq") == 1    # an on-premises alcohol license (none in Kentucky: no list)
-        ins = r.get("in") if isinstance(r.get("in"), list) else None   # [jurisdiction, result index, date]: none in Kentucky
-        self.ins = (RESULTS[ins[1]], ins[2]) if ins and len(ins) >= 3 and 0 <= ins[1] < len(RESULTS) else None
+        self.beer = r.get("liq") == 1    # an on-premises alcohol license (Louisville Metro ABC or Kentucky ABC)
+        ins = r.get("in") if isinstance(r.get("in"), list) else None   # [jurisdiction, result index, date]
+        self.ins = ((RESULTS[ins[1]], ins[2], INS_JUR[ins[0]] if 0 <= ins[0] < len(INS_JUR) else "")
+                    if ins and len(ins) >= 3 and 0 <= ins[1] < len(RESULTS) else None)
 
     def featured_key(self):
         # the app's "Featured first": honored places, then documented founding year, then name
@@ -597,7 +608,7 @@ def place_item(p, anchors=None, show_fn=False, honors=False):
         facts.append(f"<b>Since</b> {e(str(p.founded))}")
     if p.season:
         facts.append(f"<b>Season:</b> {e(p.season)}")
-    if p.ins:   # Louisville Metro's official score and its own grade where it gave one, as published and dated: never recomputed
+    if p.ins:   # the official score (and Louisville's own grade where it gave one), as published and dated: never recomputed
         facts.append(f"<b>Latest inspection:</b> {e(p.ins[0])}, {e(hdate(p.ins[1]))}")
     kinds = []
     if p.mi:
@@ -905,11 +916,12 @@ if OLD_PAGE:
 
 # ---------------------------------------------------------------- how to check an inspection (Louisville's results; the rest linked)
 url = f"{DOMAIN}/{INS_PATH}"
-N_INS = sum(1 for p in REST if p.ins)
+N_INS = sum(1 for p in REST if p.ins and p.ins[2] == LOU_JUR)
+N_INS_STATE = sum(1 for p in REST if p.ins and p.ins[2] == STATE_JUR)
 nav, bc = crumbs([("Home", "/"), ("Kentucky restaurant inspections", "/" + INS_PATH)])
 title = fit(["How to Check a Kentucky Restaurant Inspection Score", "Kentucky Restaurant Inspection Scores: Where to Look",
              f"Kentucky Restaurant Inspections | {BRAND}"], 50, 60, "inspections title")
-desc = fit(["Kentucky scores restaurant inspections out of 100. Louisville publishes its scores and grades as open data; other counties post theirs on the state portal.",
+desc = fit(["Kentucky scores restaurant inspections out of 100. Louisville publishes scores and grades as open data; other counties post scores on the state portal.",
             "Where Kentucky restaurant inspection scores are published: Louisville Metro's open data, with its own A/B/C grade, and the statewide portal for the rest."],
            140, 160, "inspections description")
 body = f"""{nav}
@@ -923,11 +935,12 @@ body = f"""{nav}
   <section id="how">
     <h2>Louisville Metro's scores and grades</h2>
     <p class="sub">Louisville Metro Public Health and Wellness records each inspection's score and, on most regular inspections, gives its own A, B or C grade, which it doesn't work out from the score alone. {plural(N_INS, 'Louisville place')} in {BRAND} show the latest score, the grade where Louisville gave one, and the date{(", with inspections through " + hdate(INS_THROUGH)) if INS_THROUGH else ""}. Both are Louisville's own, shown as published; an older result may not reflect the place today, and {BRAND} computes no grade of its own.</p>
-    <p>Everywhere else in Kentucky, the state's public inspection site is the place to look: each county has its own table of the latest scores, and every place in the app links to its county's.</p>
+    <h2>The other 119 counties</h2>
+    <p class="sub">Everywhere else, each county health department posts its latest inspection score, and any follow-up's, on the state's public inspection portal, county by county. {BRAND} reads those tables and shows the score as published, dated, on {plural(N_INS_STATE, 'place')} it matched by name and address{(", with inspections through " + hdate(INS_THROUGH_STATE)) if INS_THROUGH_STATE else ""}. The state's site gives a score, not a grade, so no letter appears outside Louisville; every place links to its county's table.</p>
   </section>
   <section id="lookup">
     <h2>What {BRAND} does show</h2>
-    <p>Every place in the app and on the <a href="/explore/">web search</a> links to its county's table on the state's inspection site, and Louisville places show their latest result. The rest is hand-checked research and James Beard honors.</p>
+    <p>Every place in the app and on the <a href="/explore/">web search</a> shows its latest published score where one was matched, and links to its county's table on the state's inspection site (Louisville places to Louisville Metro's page). The rest is hand-checked research and James Beard honors.</p>
     <p class="fine">{other_guides("/" + INS_PATH)}</p>
   </section>
   </main>"""
@@ -1363,10 +1376,10 @@ for i, (name, alt, cap) in enumerate(shots):
 
 faq = [
     ("Is Kentucky Eats free?", "Completely: no price, no ads, no in-app purchases and no account to create. It's an iPhone and iPad app on its way to the App Store, with no Android version yet; until it's out, the web search here works in any browser."),
-    ("Where do the lists come from?", f"Three kinds of source. The Hot Brown, Kentucky classics, bourbon country, Covington and Newport, historic inns and oldest-places lists are our own research from {CHECKED}, with a dated 2025 or 2026 source or a Kentucky tourism office's own page behind each place. Louisville Metro's permits, inspections and ABC licenses are public records. The wider directory of {N_REST:,} restaurants starts from open map listings (Overture Maps), filtered to the kinds that proved reliable where states publish restaurant lists."),
+    ("Where do the lists come from?", f"Three kinds of source. The Hot Brown, Kentucky classics, bourbon country, Covington and Newport, historic inns and oldest-places lists are our own research from {CHECKED}, with a dated 2025 or 2026 source or a Kentucky tourism office's own page behind each place. Louisville Metro's permits, inspections and ABC licenses, the state's public inspection portal and Kentucky ABC's licenses are public records. The wider directory of {N_REST:,} restaurants starts from open map listings (Overture Maps), filtered to the kinds that proved reliable where states publish restaurant lists."),
     ("Where can I get a Hot Brown?", f"Our Hot Brown list has {len(L['hotbrown'])} hand-checked places, from the Brown Hotel, where it was created in 1926, to Lou Lou's Hot Brown pizza and the Hot Brown soup on Frankfort's Hot Brown Trail. In the web search, the list puts the nearest first once you share your location."),
-    ("How do I check a Kentucky restaurant's inspection?", "Kentucky scores each inspection out of 100 (the violation points subtracted from 100), and the state's public inspection portal has every county's latest scores. Louisville Metro also publishes its inspections as open data, so Louisville places in the app show their latest score, and Louisville's own A, B or C grade where it gave one, as published and dated. Every other place links to its county's table on the portal, and we compute no grade."),
-    ("Does it show which places serve alcohol?", "In Louisville, yes: Louisville Metro publishes its alcoholic beverage licenses, so places with an on-premises license say so. Elsewhere, no: Kentucky ABC's statewide lookup posts no terms of use, so the app doesn't say either way, and dry or moist counties can still vote in restaurant sales."),
+    ("How do I check a Kentucky restaurant's inspection?", "Kentucky scores each inspection out of 100 (the violation points subtracted from 100), and the state's public inspection portal has every county's latest scores. Louisville Metro also publishes its inspections as open data, with its own A, B or C grade where it gave one. The app shows each place's latest published score, dated, from Louisville's data or the portal, and links to its county's table; we compute no grade."),
+    ("Does it show which places serve alcohol?", "Yes, where a license was matched: places with an on-premises license from Louisville Metro or Kentucky ABC (retail drink, quota retail drink or limited restaurant) say so. A place with no matched license shows it as unknown, never no, since a license can sit under another name and dry or moist areas can vote in restaurant sales."),
     ("Does it show ratings and reviews?", "Not from us. Tapping a place opens Apple Maps' own card inside the app, with Apple's current ratings, hours, photos and directions. None of our lists is sorted by anyone's rating."),
     ("Does it need my location?", "No. Location only matters for putting the nearest places first. If you share it, it stays on your iPhone or iPad and never reaches us, and the app works fine without it. On this website, Near me reads your location inside your browser and nowhere else."),
     ("A place has closed, or something's wrong. How do I tell you?", f"Write to {EMAIL} with the place's name, its town and what changed. Corrections ship with the next data update."),
@@ -1530,7 +1543,7 @@ body = f"""{nav}
     <h2>Check before you go</h2>
     <p>Restaurants open, close, change their hours and change their menus, and seasonal places keep seasons. Dishes and founding years are what each place or a named source said when we checked in {CHECKED}. We work to keep the lists right, but we can't promise that any listing is current or complete. Call the restaurant before you make the trip.</p>
     <h2>Inspections and public records</h2>
-    <p>Inspection results in the app and on this site are Louisville Metro's own: the official score and, where Louisville gave one, its A, B or C grade, as published and dated. Elsewhere no result is shown, and each place links to its county's table on the state's public inspection portal. We compute no grade. For official records, use each agency's own site.</p>
+    <p>Inspection results in the app and on this site are the health departments' own: Louisville Metro's official score and, where it gave one, its A, B or C grade, and elsewhere the county health department's score from the state's public inspection portal, each as published and dated. We compute no grade. For official records, use each agency's own site.</p>
     <h2>Other people's content</h2>
     <p>Ratings, reviews, hours and photos in each place card come from Apple Maps and are Apple's and its providers', under Apple's terms. Restaurant names and trademarks belong to their owners. James Beard Foundation and James Beard Award are trademarks of the James Beard Foundation. Kentucky Bourbon Trail is a trademark of the Kentucky Distillers' Association. {BRAND} is not affiliated with any restaurant, chain, award body or government agency.</p>
     <h2>Data sources and licenses</h2>
@@ -1539,6 +1552,8 @@ body = f"""{nav}
       <li>Overture Maps Foundation divisions, used for the state and county outlines on the map, under the Open Database License: © OpenStreetMap contributors, Overture Maps Foundation.</li>
       <li>Overture Maps Foundation addresses data, compiled from open address sources under permissive licenses (see docs.overturemaps.org/attribution), used to place records on the map.</li>
       <li>Louisville Metro Government's Environmental Health Bulk Data (Establishments, Inspections) and ABC Licenses, from the Louisville Metro Open Data Platform under the Open Data Commons Public Domain Dedication and License (PDDL); we keep food-service establishments, on-premises alcohol licenses and the regular, follow-up and complaint inspections that carry a score, matched to map listings.</li>
+      <li>Kentucky's public food-inspection portal (public.cdpehs.com, run by Custom Data Processing for Kentucky's local and district health departments): each county's latest inspection score and any follow-up score, exported county by county{(" (inspections through " + hdate(INS_THROUGH_STATE) + ")") if INS_THROUGH_STATE else ""} and shown as published, matched to map listings by name and address. Jefferson County comes from Louisville Metro's open data instead.</li>
+      <li>The Kentucky Department of Alcoholic Beverage Control's public license lookup (abcportal.ky.gov): active on-premises drink licenses (NQ1, NQ2, NQ3 and NQ4 retail drink, quota retail drink, limited restaurant), by business name and premises address only.</li>
       <li>The James Beard Foundation's awards: honors reported as facts.</li>
       <li>Hot Browns, Kentucky classics, bourbon country, Covington and Newport, historic inns and founding years: our own research, from dated 2025-26 pages and the pages of Kentucky's tourism offices (the Kentucky Department of Tourism, Louisville Tourism, Visit Owensboro, meetNKY), with a source recorded for every place.</li>
     </ul>

@@ -39,7 +39,9 @@ def county_of(la, lo):
 
 
 o["county"] = [county_of(la, lo) for la, lo in zip(o.lat, o.lon)]
-F["county"] = [county_of(la, lo) for la, lo in zip(F.lat, F.lon)]
+# a record with no point keeps the county its own list gives (a county's inspection reports, a state portal's county table)
+F["county"] = [county_of(la, lo) if la == la else (c if isinstance(c, str) and c else None)
+               for la, lo, c in zip(F.lat, F.lon, F["county"] if "county" in F else [None] * len(F))]
 o.to_pickle(f"{KY}/stage1.pkl")
 F.to_pickle(f"{KY}/official.pkl")
 

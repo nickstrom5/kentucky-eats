@@ -1340,9 +1340,10 @@ o = o[~(no_rec & ~own_ok)].reset_index(drop=True)
 QA_DEBUG["license_trace"] = [f"{o.name_out.iat[i_]} | {o.street.iat[i_]} | off={F.lic.iat[int(o.off.iat[i_])] if o.off.iat[i_] == o.off.iat[i_] else None}"
                               f" ({F['name'].iat[int(o.off.iat[i_])] if o.off.iat[i_] == o.off.iat[i_] else ''}) | lic={[F.lic.iat[j] for j in o.lic_ix.iat[i_]]}"
                               for i_ in range(len(o)) if re.match(r"(?i)jus aspen|boulder cafe$|castle rock beer|eaten path|amy vu|a & j refrig|aspen kitchen|oni aspen|betula", o.name_out.iat[i_] or "")]
-# Alcohol: Louisville Metro's ABC licenses (official.py) say which Jefferson County places pour alcohol; elsewhere Kentucky ABC's list
-# has no posted terms, so "Serves alcohol" is unknown ("—"), never "no" (dry and moist areas can vote in restaurant sales). A license list added later names its jurisdictions in LIQ_JUR and its on-premises types in official.ONPREM_T.
-LIQ_JUR = ("louabc",)
+# Alcohol: Louisville Metro's ABC licenses and, statewide, Kentucky ABC's active on-premise drink licenses (official.py, the BELLE
+# lookup) say which places pour alcohol. A place with no matched license stays unknown ("—"), never "no" (dry and moist areas can vote
+# in restaurant sales, and a license can sit under another name).
+LIQ_JUR = ("louabc", "kyabc")
 ONPREM_T = official.ONPREM_T
 MAKER_T = ()
 o["liq_types"] = [[F.ltype.iat[j] for j in ix if F.jur.iat[j] in LIQ_JUR] or None for ix in o.lic_ix]
@@ -1432,22 +1433,34 @@ print("tags:", {t_: int(o["t_" + t_].sum()) for t_ in ("hotbrown", "classics", "
 # ---------------------------------------------------------------- inspections: Louisville Metro's official scores and grades
 # Louisville Metro Public Health and Wellness publishes five years of inspections with the official score (100 minus the violation
 # points, 902 KAR 45:005) and, on most regular inspections, its own A/B/C grade, which isn't a function of the score: each is shown as
-# published ("Score 97, grade A"), with its own date, never recomputed. Elsewhere the statewide portal posts no terms (official.py), so no
-# result is shown and the app links the county's table. One visit per inspection id.
+# published ("Score 97, grade A"), with its own date, never recomputed. Elsewhere the statewide portal's county tables (official.py
+# load_cdp, Nick's yes 2026-11-07) give the last inspection and any follow-up with the score as published ("Score 92"; no grade outside
+# Louisville), dated. One visit per inspection id.
 # Louisville's results as published, from the records themselves: a higher score first, then grade A before B before C, then the bare score
 RES = sorted({v[1] for hs in F.insp.dropna() for v in (hs or []) if v[1]}, key=lambda s_: (-int(re.search(r"\d+", s_).group()), s_))
-INSJ = ["Louisville Metro Public Health and Wellness"]
+INSJ = ["Louisville Metro Public Health and Wellness", "Kentucky local health department (state public portal)"]
+INS_OF = {"louisville": INSJ[0], "cdp": INSJ[1]}
 INS_THROUGH = {}
 cols_i = ["in_res", "in_pts", "in_date", "in_type", "in_n", "in_rr", "in_cl", "in_hist", "in_items", "in_jur"]
 for c_ in cols_i:
     o[c_] = None
 o["in_hist"] = o["in_hist"].astype(object)
-mont_ix = [[j for j in ix if F.jur.iat[j] == "louisville"] for ix in o.lic_ix]
-span_two = []
+mont_ix = [[j for j in ix if F.jur.iat[j] in INS_OF] for ix in o.lic_ix]
+span_two, ins_pairs = [], []
+# a result belongs to the county its health department inspects: a record placed or matched across a county line never lends its
+# inspections to a place there (a Porter County record once reached a Hammond place in Lake County)
+AUTH_CTY = {"louisville": "Jefferson County"}
+def auth_cty(j):
+    return (AUTH_CTY.get(F.jur.iat[j]) or (official.COUNTIES[int(F.lic.iat[j].split("-")[1]) - 1] if F.jur.iat[j] == "cdp" else None))
 for i_, js in enumerate(mont_ix):
+    js = [j for j in js if auth_cty(j) == o.county.iat[i_]]
     if not js:
         continue
     seen = {}
+    # Louisville's own records first where a place has both (Jefferson County isn't read from the state portal)
+    if any(F.jur.iat[j] == "louisville" for j in js):
+        js = [j for j in js if F.jur.iat[j] == "louisville"]
+    jur_ = INS_OF[F.jur.iat[js[0]]]
     for j in sorted(js, key=lambda j: -int(re.sub(r"\D", "", F.lic.iat[j]) or 0)):   # newer registration first
         for d, res, typ, num in F.insp.iat[j] or []:
             if num in seen:
@@ -1459,14 +1472,18 @@ for i_, js in enumerate(mont_ix):
     if not visits:
         continue
     d, res, typ = visits[0]
+    ins_pairs.append(f"{o.name_out.iat[i_]} | {o.street.iat[i_]} || " + " ; ".join(f"{F['name'].iat[j]} | {F.addr.iat[j]}" for j in js))
     o.at[o.index[i_], "in_res"] = res; o.at[o.index[i_], "in_date"] = d; o.at[o.index[i_], "in_type"] = typ
-    o.at[o.index[i_], "in_n"] = len(visits); o.at[o.index[i_], "in_jur"] = INSJ[0]
+    o.at[o.index[i_], "in_n"] = len(visits); o.at[o.index[i_], "in_jur"] = jur_
     o.at[o.index[i_], "in_rr"] = sum(1 for v in visits if re.search(r"(?i)follow", v[2] or ""))
     o.at[o.index[i_], "in_cl"] = sum(1 for v in visits if v[1].startswith("Closed"))
     o.at[o.index[i_], "in_hist"] = [(v[0], v[1], None, v[2]) for v in visits]
-if o.in_date.notna().any():
-    INS_THROUGH[INSJ[0]] = max(d for d in o.in_date.dropna())
+for jn in INSJ:
+    ds = o.loc[o.in_jur.eq(jn), "in_date"].dropna()
+    if len(ds):
+        INS_THROUGH[jn] = max(ds)
 QA_DEBUG["inspection_number_two_dates"] = span_two[:200]
+QA_DEBUG["inspection_pairs"] = ins_pairs   # place | street || the record(s) its result comes from (review list)
 print("inspection results attached:", int(o.in_res.notna().sum()), o.in_res.value_counts().to_dict(),
       "| inspection numbers on two dates:", len(span_two))
 
@@ -1734,8 +1751,9 @@ def web_home(w):
     return WEB_HOME.get(pr.netloc.lower().removeprefix("www.") + pr.path.rstrip("/"), w)
 
 
-# the label each official list shows on a place, and the lists whose record numbers are shown; none in Kentucky yet
-LIC_SRC = {"louisville": "Louisville Metro food permit", "louabc": "Louisville Metro ABC license"}
+# the label each official list shows on a place, and the lists whose record numbers are shown
+LIC_SRC = {"louisville": "Louisville Metro food permit", "louabc": "Louisville Metro ABC license",
+           "cdp": "Kentucky public inspection portal", "kyabc": "Kentucky ABC license"}
 LIC_ID_JUR = ("louisville", "louabc")
 
 
@@ -1752,7 +1770,7 @@ def lic_list(ix):
 
 
 COUNTIES = sorted(o.county.dropna().unique().tolist())
-JUR = {"louisville": 1, "louabc": 2}   # official list -> its number in the app's data
+JUR = {"louisville": 1, "louabc": 2, "cdp": 3, "kyabc": 4}   # official list -> its number in the app's data
 o["jur_n"] = [JUR.get(F.jur.iat[int(j)], 0) if j == j else 0 for j in o.off]
 SRCS = ["official", "meta", "AllThePlaces", "DAC", "research", "BrightQuery", "Foursquare", "Microsoft"]
 meta_common = {"generated": TODAY, "overture_release": "2026-10-21.0", "inspections_through": INS_THROUGH,

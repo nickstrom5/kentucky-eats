@@ -16,11 +16,21 @@
   rating score of the establishment shall be the total of the point value for all violations subtracted from 100" (Section 6(4));
   under 70 brings a DFS-214 notice of intent to suspend (Section 7(1)).
 
-## Linked, not read (Nick's call)
-- **Statewide inspection portal** (public.cdpehs.com/KYEnvPBL/…/ShowVW_PUBLIC_EST_INSPTable.aspx?COUNTY=n, Custom Data Processing; robots
-  allows it; no posted terms): each place links its county's table (n = alphabetical county number, Fayette 34; the link renders after a
-  session redirect, checked once). A bulk CSV export would give scores for all 120 counties: **needs Nick's yes**.
-- **Kentucky ABC BELLE** licensee lookup (abcportal.ky.gov): no posted terms; not used, so "Serves alcohol" is unknown outside Jefferson.
+## Added with Nick's yes (2026-11-07)
+- **Statewide inspection portal** (public.cdpehs.com/KYEnvPBL/VW_PUBLIC_EST_INSP/ShowVW_PUBLIC_EST_INSPTable.aspx?COUNTY=n, Custom Data
+  Processing for the local and district health departments; robots.txt answers 404, no posted terms): `pipeline/fetch_cdp.py` presses
+  each county table's own "Export to CSV" button, one county at a time with a 3-second pause, a generic client name (EatsRankedData/1.0),
+  no email; Jefferson (56) is skipped (Louisville's open data). Columns: name, address, city, last inspection date and score, follow-up
+  date and score. Shown as published ("Score 92", dated), no grade (the portal gives none); the rows carry no establishment type, so
+  they only attach to listings they match (official.py `load_cdp`, kind "inspected"). Each place outside Jefferson links its county's
+  table; a Jefferson place links Louisville Metro's food safety page. Rebuilt 2026-11-07: 4,696 places outside Jefferson show the
+  portal's latest score (through 2026-11-06), 1,571 in Jefferson show Louisville's (through 2026-10-29).
+- **Kentucky ABC BELLE** license lookup (abcportal.ky.gov/BelleExternal/LicenseLookup/LicenseDetails; robots.txt 404; no posted terms):
+  its "Export to Excel" fails on the State's side (an EPPlus assembly error, 2026-11-07), so `pipeline/fetch_abc_belle.py` reads the
+  grid's own data call (GetGridData) by license type, 200 rows a page, 3 seconds apart: NQ1, NQ2, NQ3 and NQ4 retail drink, LD quota
+  retail drink, LR limited restaurant (5,667 active licenses, 2026-11-07). Kept: DBA name and premises only, never the licensee's name.
+  On-premises drink licenses mark "Serves alcohol" statewide (official.py `load_kyabc`): 1,551 places (1,340 from Kentucky ABC, 211
+  from Louisville Metro's list).
 - **Lexington-Fayette (LFCHD)** green/red placards: name-by-name lookup only; no color shown.
 
 ## Research sources (robots-checked with pipeline/check_sources.py)
@@ -33,5 +43,5 @@ trail is a 2023 Herald-Leader list; Winchester's beer cheese trail pages are 201
 ## Map data and calibration
 - Overture 2026-10-21.0: 17,967 eating/drinking listings in Kentucky; 120 counties; border checks pass (the Kentucky Bend in; Cincinnati,
   Jeffersonville, Evansville, Clarksville, Huntington out). No Google 2021 snapshot is read at all.
-- App: 9,054 places, 8,659 restaurants (Census CBP 2023: 7,857 NAICS 722 establishments). Keep rule: the family's (Meta 0.95, or 0.90
+- App (2026-11-07 rebuild): 10,299 places, 9,841 restaurants (Census CBP 2023: 7,857 NAICS 722 establishments). Keep rule: the family's (Meta 0.95, or 0.90
   with a website, or a brand feed), plus Louisville's permitted restaurants (1,869 places on an official list, 475 added from it).

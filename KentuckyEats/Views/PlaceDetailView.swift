@@ -180,8 +180,8 @@ struct PlaceDetailView: View {
     }
 
     /// Louisville Metro publishes its inspections as data: each one's official score and, where it gave one, its own A/B/C grade,
-    /// shown as published with the inspection's date, never recomputed. Elsewhere the statewide portal posts no terms, so no result is
-    /// shown and the link goes to the county's table there.
+    /// shown as published with the inspection's date, never recomputed. Elsewhere the statewide public portal's county tables give the
+    /// last inspection's score and any follow-up's (no grade), also shown as published and dated; the link goes to the county's table.
     private var inspections: some View {
         section("Health inspections") {
             VStack(alignment: .leading, spacing: 8) {
@@ -195,19 +195,36 @@ struct PlaceDetailView: View {
                     if let n = detail?.inspection?.n, n > 0 {
                         Text("\(n.formatted()) \(n == 1 ? "inspection" : "inspections") with a score in the published records.").font(.caption).foregroundStyle(Theme.ink2)
                     }
-                    Text(jurisdictionNote(jurisdiction: model.jurisdictionName(ins.jurisdiction) ?? "The health department")).font(.caption).foregroundStyle(Theme.muted)
-                    Link(destination: Links.louisvilleInspections) {
-                        Label("Louisville Metro's food safety page", systemImage: "arrow.up.right.square").font(.subheadline.weight(.semibold))
+                    let jur = model.jurisdictionName(ins.jurisdiction) ?? "The health department"
+                    Text(jurisdictionNote(jurisdiction: jur)).font(.caption).foregroundStyle(Theme.muted)
+                    if jur.hasPrefix("Louisville") {
+                        Link(destination: Links.louisvilleInspections) {
+                            Label("Louisville Metro's food safety page", systemImage: "arrow.up.right.square").font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.green)
+                    } else {
+                        Link(destination: Links.countyInspections(place.county)) {
+                            Label(place.county.map { "\($0) scores on the state portal" } ?? "Kentucky's inspection portal", systemImage: "arrow.up.right.square")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.green)
                     }
-                    .foregroundStyle(Theme.green)
                 } else {
-                    Text("Outside Louisville Metro's open data, Kentucky's health departments post their inspection scores on the state's public inspection portal, which this app doesn't copy, so it shows no result here and computes no grade.")
+                    Text("Kentucky's health departments post their inspection scores on the state's public inspection portal (Louisville Metro in its open data). No score in them was matched to this place, so none is shown, and this app computes no grade.")
                         .font(.caption).foregroundStyle(Theme.muted)
-                    Link(destination: Links.countyInspections(place.county)) {
-                        Label(place.county.map { "\($0) scores on the state portal" } ?? "Kentucky's inspection portal", systemImage: "arrow.up.right.square")
-                            .font(.subheadline.weight(.semibold))
+                    // Jefferson County's results come from Louisville Metro's open data; the portal's Jefferson table is never read
+                    if place.county == "Jefferson County" {
+                        Link(destination: Links.louisvilleInspections) {
+                            Label("Louisville Metro's food safety page", systemImage: "arrow.up.right.square").font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.green)
+                    } else {
+                        Link(destination: Links.countyInspections(place.county)) {
+                            Label(place.county.map { "\($0) scores on the state portal" } ?? "Kentucky's inspection portal", systemImage: "arrow.up.right.square")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.green)
                     }
-                    .foregroundStyle(Theme.green)
                 }
             }
         }
@@ -215,8 +232,12 @@ struct PlaceDetailView: View {
 
     private func jurisdictionNote(jurisdiction: String) -> String {
         let through = model.inspectionsThrough[jurisdiction].flatMap { DayFormat.text($0) }
-        return "Official results from \(jurisdiction)'s open data" + (through.map { " (inspections through \($0))" } ?? "")
-            + ": the score is 100 minus the violation points under Kentucky's food code, and the letter is Louisville's own grade, shown only where it gave one. This app computes no grade, and an older result may not reflect the place today."
+        if jurisdiction.hasPrefix("Louisville") {
+            return "Official results from \(jurisdiction)'s open data" + (through.map { " (inspections through \($0))" } ?? "")
+                + ": the score is 100 minus the violation points under Kentucky's food code, and the letter is Louisville's own grade, shown only where it gave one. This app computes no grade, and an older result may not reflect the place today."
+        }
+        return "Official results from Kentucky's public inspection portal, posted by the county health department" + (through.map { " (inspections through \($0))" } ?? "")
+            + ": the last inspection's score and any follow-up's, 100 minus the violation points under Kentucky's food code, shown as published. This app computes no grade, and an older result may not reflect the place today."
     }
 
     private var records: some View {
@@ -229,7 +250,7 @@ struct PlaceDetailView: View {
                 } else {
                     kv("License record", detailLoaded ? "—" : "…")
                 }
-                kv("Serves alcohol", place.servesAlcohol ? "Licensed to serve on the premises (Louisville Metro ABC)" : "—")
+                kv("Serves alcohol", place.servesAlcohol ? "Licensed to serve on the premises (\(abcSource))" : "—")
                 Text(recordsNote).font(.caption).foregroundStyle(Theme.muted)
             }
         }
@@ -246,15 +267,20 @@ struct PlaceDetailView: View {
         }
     }
 
+    /// Which ABC list says it pours: Louisville Metro's open data, else Kentucky ABC's statewide lookup
+    private var abcSource: String {
+        (detail?.licenses ?? []).contains { $0.source.hasPrefix("Louisville Metro ABC") } ? "Louisville Metro ABC" : "Kentucky ABC"
+    }
+
     /// "0054748", never broken across lines
     private static func unbroken(_ id: String) -> String { id.replacingOccurrences(of: "-", with: "\u{2011}") }
 
     /// Where the records come from; a missing record is unknown, not "no license".
     private var recordsNote: String {
         if place.tier == .licensed || detail?.licenses.isEmpty == false {
-            return "From Louisville Metro's open data: its list of permitted food establishments and its ABC licenses. Elsewhere in Kentucky no open license list is used, so \u{2014} means unknown, never \"no\"."
+            return "From Louisville Metro's open data (its permitted food establishments and ABC licenses), Kentucky's public inspection portal and Kentucky ABC's statewide license lookup. A record that wasn't matched shows \u{2014}, which means unknown, never \"no\"."
         }
-        return "Outside Louisville Metro, Kentucky publishes no open list of its restaurants we use, and Kentucky ABC's statewide license lookup isn't used, so this app shows no license and no alcohol status: \u{2014} means unknown, never \"no\"."
+        return "No record in Louisville Metro's open data, Kentucky's public inspection portal or Kentucky ABC's license lookup was matched to this place, so \u{2014} means unknown, never \"no\"."
     }
 
     private var listingNote: String {
@@ -266,7 +292,7 @@ struct PlaceDetailView: View {
         case .licensed:
             return place.source == "official"
                 ? "From Louisville Metro's list of permitted food establishments. The open map data didn't have it, so it's placed on its listed street address."
-                : "Matched to Louisville Metro's list of permitted food establishments or its ABC licenses."
+                : "Matched to an official record: Louisville Metro's permitted food establishments or ABC licenses, Kentucky's public inspection portal or Kentucky ABC's licenses."
         case .confirmed, .listing:
             let base = place.tier == .confirmed
                 ? "A high-confidence listing in Overture's open map data."
